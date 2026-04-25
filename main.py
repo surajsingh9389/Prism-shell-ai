@@ -2,9 +2,11 @@ import asyncio
 from typing import List, Literal, TypedDict
 from langgraph.graph import StateGraph, START, END
 from hybrid_search_with_reranking import get_hybrid_reranked_docs
+from build_prompt import build_prompt
+from generator import generateAnswer
 
 # Document structure to hold retrieved information along with its source and scores for retrieval and reranking.
-class Document(TypedDict):
+class RetrievedDoc(TypedDict):
     content: str
     source: str
     retrieval_score: float
@@ -18,10 +20,10 @@ class AgentState(TypedDict):
     max_iterations: int
 
     # --- Retrieval ---
-    retrieved_docs: List[Document]
+    retrieved_docs: List[RetrievedDoc]
 
     # --- Generation ---
-    # current_answer: str
+    current_answer: str
 
     # # --- Evaluation ---
     # faithfulness_score: float
@@ -42,17 +44,21 @@ async def retriever_node(state: AgentState):
     query = state["query"]
     # We AWAIT the result here
     processed_docs = await get_hybrid_reranked_docs(query)
+    state["iteration"] += 1
     
     return {"retrieved_docs": processed_docs}
 
-def generator(state: AgentState) -> AgentState:
-    # Placeholder for generation logic
+async def generator(state: AgentState) -> AgentState:
     # This function would typically use the retrieved documents to generate an answer to the query.
-    # For demonstration, we will just return the state with a dummy generated answer.
-    state['current_answer'] = "This is a generated answer based on the retrieved documents."
+    query = state["query"]
+    docs = state["retrieved_docs"]
+    context = "\n\n".join([f"{doc['content']} (source: {doc['source']})" for doc in docs])
+    prompt = build_prompt(query, context)
+    answer = await generateAnswer(prompt)
+    state['current_answer'] = answer
     return state
 
-def critic(state: AgentState) -> AgentState:
+async def critic(state: AgentState) -> AgentState:
     # Placeholder for evaluation logic
     # This function would typically evaluate the generated answer for faithfulness and relevance.
     # For demonstration, we will just return the state with some dummy evaluation scores and feedback.
@@ -66,11 +72,11 @@ def critic(state: AgentState) -> AgentState:
 agent_builder = StateGraph(AgentState)
 
 agent_builder.add_node("retriever", retriever_node)
-# agent_builder.add_node("generator", generator)
+agent_builder.add_node("generator", generator)
 # agent_builder.add_node("critic", critic)
 
 agent_builder.add_edge(START, "retriever")
-# agent_builder.add_edge("retriever", "generator")
+agent_builder.add_edge("retriever", "generator")
 # agent_builder.add_edge("generator", "critic")
 
 graph = agent_builder.compile()

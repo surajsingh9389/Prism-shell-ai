@@ -53,7 +53,7 @@ async def get_hybrid_reranked_docs(query: str) -> List[Document]:
         doc_entry: SearchOutput = {
             "content": doc.page_content,
             "source": doc.metadata.get("source", "unknown"),
-            "retrieval_score": 0.0, # Ensemble doesn't provide raw scores by default
+            "retrieval_score": float(rerank_scores[i]), # Ensemble doesn't provide raw scores by default
             "rerank_score": float(rerank_scores[i])
         }
         final_output.append(doc_entry)
