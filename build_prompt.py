@@ -1,6 +1,11 @@
 def build_prompt(query: str, context: str) -> str:
     prompt = f"""
-    Answer the question ONLY using the context below.
+    You must answer the question using ONLY the provided context.
+
+    STRICT RULES:
+    - Do NOT use outside knowledge
+    - If the answer is not explicitly in the context, say "I don't know"
+    - Always cite the source in your answer
     
     Context:
     {context}

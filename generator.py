@@ -1,5 +1,8 @@
 import os
+from dotenv import load_dotenv
 from huggingface_hub import InferenceClient
+
+load_dotenv()
 
 # Your Read Token 
 HF_TOKEN = os.getenv("TOKEN")
@@ -9,11 +12,14 @@ client = InferenceClient(api_key=HF_TOKEN)
 
 async def generateAnswer(prompt: str) -> str:
     # Example for text generation
-    messages = [{"role": "system", "content": prompt}]
+    messages = [
+    {"role": "system", "content": "You are a helpful AI assistant that answers strictly from provided context."},
+    {"role": "user", "content": prompt}
+    ]
     completion = client.chat.completions.create(
         model="deepseek-ai/DeepSeek-V3", 
         messages=messages, 
-        max_tokens=60,
+        max_tokens=100,
         temperature=0.0
     )
-    return completion.choices[0].message
+    return completion.choices[0].message.content.strip()

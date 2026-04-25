@@ -5,6 +5,9 @@ from hybrid_search_with_reranking import get_hybrid_reranked_docs
 from build_prompt import build_prompt
 from generator import generateAnswer
 
+
+TOP_K = 3
+
 # Document structure to hold retrieved information along with its source and scores for retrieval and reranking.
 class RetrievedDoc(TypedDict):
     content: str
@@ -37,7 +40,7 @@ class AgentState(TypedDict):
     # ]
 
     # # --- Observability ---
-    # thoughts: List[str]
+    thoughts: List[str]
     
 
 async def retriever_node(state: AgentState):
@@ -48,14 +51,27 @@ async def retriever_node(state: AgentState):
     
     return {"retrieved_docs": processed_docs}
 
-async def generator(state: AgentState) -> AgentState:
+async def generator(state: AgentState) -> AgentState:    
     # This function would typically use the retrieved documents to generate an answer to the query.
     query = state["query"]
     docs = state["retrieved_docs"]
-    context = "\n\n".join([f"{doc['content']} (source: {doc['source']})" for doc in docs])
+    
+    # If retrieval fails:
+    if not docs:
+        state["current_answer"] = "I don't know"
+        return state
+    
+    context = "\n\n".join([f"{doc['content']} (source: {doc['source']})" for doc in docs[:TOP_K]]) 
+    
     prompt = build_prompt(query, context)
     answer = await generateAnswer(prompt)
+    
     state['current_answer'] = answer
+    
+    state.setdefault("thoughts", []).append(
+        f"Generated answer using top {len(docs[:TOP_K])} docs"
+    )
+    
     return state
 
 async def critic(state: AgentState) -> AgentState:
