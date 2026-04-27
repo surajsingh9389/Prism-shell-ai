@@ -2,8 +2,10 @@ import asyncio
 from typing import List, Literal, TypedDict
 from langgraph.graph import StateGraph, START, END
 from hybrid_search_with_reranking import get_hybrid_reranked_docs
-from build_prompt import build_prompt
+from build_prompt import generator_prompt, evaluator_prompt
 from generator import generateAnswer
+from evaluator import evaluate_answer
+import json
 
 
 TOP_K = 3
@@ -28,16 +30,15 @@ class AgentState(TypedDict):
     # --- Generation ---
     current_answer: str
 
-    # # --- Evaluation ---
-    # faithfulness_score: float
-    # relevance_score: float
-    # feedback: str
-    # failure_type: Literal[
-    #     "hallucination",
-    #     "low_relevance",
-    #     "incomplete",
-    #     "good"
-    # ]
+    # --- Evaluation ---
+    faithfulness_score: float
+    relevance_score: float
+    feedback: str
+    failure_type: Literal[
+        "hallucination",
+        "low_relevance",
+        "good"
+    ]
 
     # # --- Observability ---
     thoughts: List[str]
@@ -63,7 +64,7 @@ async def generator(state: AgentState) -> AgentState:
     
     context = "\n\n".join([f"{doc['content']} (source: {doc['source']})" for doc in docs[:TOP_K]]) 
     
-    prompt = build_prompt(query, context)
+    prompt = generator_prompt(query, context)
     answer = await generateAnswer(prompt)
     
     state['current_answer'] = answer
@@ -75,25 +76,72 @@ async def generator(state: AgentState) -> AgentState:
     return state
 
 async def critic(state: AgentState) -> AgentState:
-    # Placeholder for evaluation logic
-    # This function would typically evaluate the generated answer for faithfulness and relevance.
-    # For demonstration, we will just return the state with some dummy evaluation scores and feedback.
-    state['faithfulness_score'] = 0.8
-    state['relevance_score'] = 0.75
-    state['feedback'] = "The answer is mostly faithful but could be more relevant to the query."
-    state['failure_type'] = "low_relevance"
+    """
+    Evaluates the generated answer for faithfulness to context 
+    and relevance to the user query.
+    """
+    
+    # Extract necessary data from state
+    query = state["query"]
+    
+    # Information from Retriever
+    docs = state["retrieved_docs"]
+    context = "\n\n".join([f"{doc['content']} (source: {doc['source']})" for doc in docs[:TOP_K]]) 
+    
+    # Information from Generator
+    answer = state["current_answer"] 
+    
+    # Build evaluation prompt
+    system_prompt = evaluator_prompt()
+    user_prompt = f"QUERY: {query}\n\nCONTEXT: {context}\n\nANSWER: {answer}"
+    
+    # Call the LLM to evaluate the answer
+    evaluation_response = await evaluate_answer(system_prompt, user_prompt)
+    
+    # Parse the scores and feedback from the LLM's response
+    score = json.loads(evaluation_response)
+    
+    state["faithfulness_score"] = score.get("faithfulness_score", 0.0)
+    state["relevance_score"] = score.get("relevance_score", 0.0)
+    state["feedback"] = score.get("feedback", "")
+    
+    # Determine failure type based on scores 
+    if state['faithfulness_score'] < 0.7:
+        state['failure_type'] = "hallucination"
+    elif state['relevance_score'] < 0.7:
+        state['failure_type'] = "low_relevance"
+    else:
+        state['failure_type'] = "good"
+        
     return state
+
+
+def should_continue(state: AgentState):
+    if state["iteration"] >= state["max_iterations"]:
+        return "end"
+    
+    if state["failure_type"] == "good":
+        return "end"
+    
+    if state["failure_type"] == "low_relevance":
+        return "retriever"
+    
+    if state["failure_type"] == "hallucination":
+        return "generator"
+    
+    return "retry"
 
 
 agent_builder = StateGraph(AgentState)
 
 agent_builder.add_node("retriever", retriever_node)
 agent_builder.add_node("generator", generator)
-# agent_builder.add_node("critic", critic)
+agent_builder.add_node("critic", critic)
 
 agent_builder.add_edge(START, "retriever")
 agent_builder.add_edge("retriever", "generator")
-# agent_builder.add_edge("generator", "critic")
+agent_builder.add_edge("generator", "critic")
+agent_builder.add_conditional_edges("critic", should_continue, { "end": END, "retriever": "retriever", "generator": "generator"} )
 
 graph = agent_builder.compile()
 
