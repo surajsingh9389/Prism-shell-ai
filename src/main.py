@@ -1,7 +1,7 @@
 import asyncio
 from typing import List, Literal, TypedDict
 from langgraph.graph import StateGraph, START, END
-from hybrid_search_with_reranking import get_hybrid_reranked_docs
+from hybrid_search import get_hybrid_reranked_docs
 from build_prompt import generator_prompt, evaluator_prompt, refiner_prompt
 from generator import generateAnswer
 from evaluator import evaluate_answer
@@ -39,8 +39,14 @@ class AgentState(TypedDict):
         "low_relevance",
         "good"
     ]
-
-    # # --- Observability ---
+    
+    # Low relevance score refine query 
+    refined_query: str
+    
+    # # Planner state 
+    # plan: str
+    
+    #  --- Observability ---
     thoughts: List[str]
     
 
@@ -105,6 +111,9 @@ async def critic(state: AgentState) -> AgentState:
     state["faithfulness_score"] = score.get("faithfulness_score", 0.0)
     state["relevance_score"] = score.get("relevance_score", 0.0)
     state["feedback"] = score.get("feedback", "")
+    
+    print("Iteration", state['iteration'])
+    print(f"Evaluation → Faithfulness: {state['faithfulness_score']}, Relevance: {state['relevance_score']}, Feedback: {state['feedback']}")
     
     
     # Determine failure type based on scores 
@@ -181,7 +190,7 @@ graph = agent_builder.compile()
 async def run_agent():
     # Use AINVOKE instead of INVOKE
     state = await graph.ainvoke({
-        "query": "Using ONLY the ai_engineering_blog source, explain the 5-step process for configuring BM25 inside a LangGraph actor.", 
+        "query": "What is FAISS", 
         "iteration": 0, 
         "max_iterations": 3,
         "thoughts": []
