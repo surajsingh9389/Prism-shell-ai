@@ -19,7 +19,7 @@ class IngestionService:
         file_path=file_path,
         export_type=ExportType.DOC_CHUNKS, # Tells Docling to handle the chunking
         chunker=HybridChunker(
-        tokenizer="sentence-transformers/all-MiniLM-L6-v2", # Matches embedding model
+        tokenizer="BAAI/bge-small-en-v1.5", # Matches embedding model
         max_tokens=512,  
         merge_peers=True # Keeps related list items/table rows together
     )
@@ -44,12 +44,13 @@ class IngestionService:
             doc.metadata = clean_metadata
             final_cleaned_chunks.append(doc)
         
-        # print("Final Chunks after Docling Processing:")
-        # print(final_cleaned_chunks)
+        print("Final Chunks after Docling Processing:")
+        print(final_cleaned_chunks)
+        print('-'*70)
         return final_cleaned_chunks
 
 # For local testing
-if __name__ == "__main__":
-    service = IngestionService()
+# if __name__ == "__main__":
+#     service = IngestionService()
     # Ensure you have a dummy file or update path to test
     # asyncio.run(service.ingest_and_chunk("raw_data.txt"))
