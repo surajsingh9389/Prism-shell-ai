@@ -1,6 +1,7 @@
+import asyncio
 from langgraph.graph import StateGraph, START, END
-from core.state import AgentState
-from agents.researcher import (
+from backend.core.state import AgentState
+from backend.agents.researcher import (
     planner, retriever_node, generator, 
     critic, refiner, route_from_planner, should_continue
 )
@@ -32,3 +33,14 @@ def compile_workflow():
     return builder.compile()
 
 graph = compile_workflow()
+
+
+
+# if __name__ == "__main__":
+#     inputs = {
+#         "query": "summarize my document",
+#         "iteration": 0,
+#         "max_iterations": 3,
+#         "thoughts": []
+#     }
+#     asyncio.run(graph.ainvoke(inputs))

@@ -19,5 +19,5 @@ async def run_full_ingestion(file_path: str):
     
     return f"Processed {len(chunks)} chunks from {file_path}"
 
-if __name__ == "__main__":
-    asyncio.run(run_full_ingestion("raw_data.txt"))
+# if __name__ == "__main__":
+#     asyncio.run(run_full_ingestion("raw_data.txt"))

@@ -1,10 +1,10 @@
 import json
 from typing import Literal
 
-from core.state import AgentState
-from core.prompts import GENERATOR_PROMPT, EVALUATOR_PROMPT, REFINER_PROMPT
-from services.llm import LLMService
-from engine.data_manager import vector_db
+from backend.core.state import AgentState
+from backend.core.prompts import GENERATOR_PROMPT, EVALUATOR_PROMPT, REFINER_PROMPT
+from backend.services.llm import LLMService
+from backend.engine.data_manager import vector_db
 
 llm_service = LLMService()
 
@@ -30,7 +30,7 @@ async def retriever_node(state: AgentState) -> dict:
     """Fetches and reranks documents from Qdrant."""
     query = state["query"]
     # We use the service we built to handle hybrid search + reranking
-    processed_docs = await vector_db.get_hybrid_reranked_docs(query, top_k=3)
+    processed_docs = await vector_db.search_docs(query, top_k=3)
     
     return {"retrieved_docs": processed_docs}
 
@@ -62,6 +62,9 @@ async def generator(state: AgentState) -> AgentState:
         answer = await llm_service.generate_text(system_msg, user_msg)
 
     state["current_answer"] = answer
+    # print('-'*70)
+    # print(answer)
+    # print('-'*70)
     state["thoughts"].append("Generator: Answer synthesized.")
     return state
 

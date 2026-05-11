@@ -50,7 +50,7 @@ class IngestionService:
         return final_cleaned_chunks
 
 # For local testing
-if __name__ == "__main__":
-    service = IngestionService()
-    # Ensure you have a dummy file or update path to test
-    asyncio.run(service.ingest_and_chunk("raw_data.txt"))
+# if __name__ == "__main__":
+#     service = IngestionService()
+#     # Ensure you have a dummy file or update path to test
+#     asyncio.run(service.ingest_and_chunk("raw_data.txt"))
