@@ -1,7 +1,7 @@
 import asyncio
 from langgraph.graph import StateGraph, START, END
-from backend.core.state import AgentState
-from backend.agents.researcher import (
+from src.core.state import AgentState
+from src.agents.researcher import (
     planner, retriever_node, generator, 
     critic, refiner, route_from_planner, should_continue
 )

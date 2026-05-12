@@ -1,10 +1,10 @@
 import json
 from typing import Literal
 
-from backend.core.state import AgentState
-from backend.core.prompts import GENERATOR_PROMPT, EVALUATOR_PROMPT, REFINER_PROMPT
-from backend.services.llm import LLMService
-from backend.engine.data_manager import vector_db
+from src.core.state import AgentState
+from src.core.prompts import GENERATOR_PROMPT, EVALUATOR_PROMPT, REFINER_PROMPT
+from src.services.llm import LLMService
+from src.engine.data_manager import vector_db
 
 llm_service = LLMService()
 

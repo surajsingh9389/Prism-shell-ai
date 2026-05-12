@@ -2,7 +2,7 @@ from typing import List
 from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
 from langchain_qdrant import QdrantVectorStore, RetrievalMode
 from langchain_core.documents import Document
-from backend.core.state import RetrievedDoc
+from src.core.state import RetrievedDoc
 import asyncio
 
 class VectorDBService:

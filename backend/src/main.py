@@ -1,11 +1,11 @@
-from backend.engine.graph import graph
+from src.engine.graph import graph
 
 import os
 import asyncio
 from pydantic import BaseModel
 from typing import List
 from fastapi import FastAPI, UploadFile, File, HTTPException
-from backend.engine.data_manager import run_full_ingestion
+from src.engine.data_manager import run_full_ingestion
 app = FastAPI(title="Personal Knowledge Agent")
 
 class QueryRequest(BaseModel):

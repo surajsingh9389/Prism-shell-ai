@@ -1,6 +1,6 @@
 import asyncio
-from backend.services.ingestion import IngestionService
-from backend.services.vector_db import VectorDBService
+from src.services.ingestion import IngestionService
+from src.services.vector_db import VectorDBService
 
 # Create single instances to be shared across the app
 ingestor = IngestionService()
