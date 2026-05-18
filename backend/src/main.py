@@ -6,6 +6,8 @@ from pydantic import BaseModel
 from typing import List
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from src.engine.data_manager import run_full_ingestion
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(title="Personal Knowledge Agent")
 
 class QueryRequest(BaseModel):
@@ -14,6 +16,19 @@ class QueryRequest(BaseModel):
 class QueryResponse(BaseModel):
     answer: str
     sources: List[str]
+
+origins = [
+    "http://localhost:5173",  # Default Vite + React port
+]
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all HTTP methods (GET, POST, PUT, DELETE)
+    allow_headers=["*"],  # Allows all headers
+)
     
  
 @app.get('/')

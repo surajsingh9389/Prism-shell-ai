@@ -1,18 +1,22 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router'
+import { useQueryData } from '../context/queryContext'
 
 const Home = () => {
-  const [query, setQuery] = useState('')
+  const { query, setQuery, setResponseData } = useQueryData();
   const navigate = useNavigate()
 
   const handleSearch = (e) => {
-    e?.preventDefault()
+    if (e) e.preventDefault()
     if (!query.trim()) return
-    navigate('/response', { state: { query: query.trim() } })
+    setResponseData(null)
+    navigate('/response')
   }
 
   const handleSuggestion = (text) => {
-    navigate('/response', { state: { query: text } })
+    setQuery(text)
+    setResponseData(null)
+    navigate('/response')
   }
   return (
     <div className="min-h-screen flex flex-col font-sans text-gray-900 bg-white">

@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { useLocation, useNavigate } from 'react-router'
+import { useNavigate } from 'react-router'
+import axios from 'axios'
+import { useQueryData } from '../context/queryContext'
 
 const QueryResponse = () => {
-  const location = useLocation()
+  const { query, setQuery, responseData, setResponseData, isLoading, setIsLoading } = useQueryData()
   const navigate = useNavigate()
-  const query = location.state?.query || ''
-  const [answer, setAnswer] = useState('')
-  const [sources, setSources] = useState([])
-  const [loading, setLoading] = useState(true)
+  
+  const answer = responseData?.answer || ''
+  const sources = responseData?.sources || []
+
   const [error, setError] = useState(null)
   const [displayedAnswer, setDisplayedAnswer] = useState('')
   const [isTyping, setIsTyping] = useState(false)
@@ -26,42 +28,38 @@ const QueryResponse = () => {
     if (!query) return
 
     const fetchAnswer = async () => {
-      setLoading(true)
+      setIsLoading(true)
       setError(null)
       setDisplayedAnswer('')
       setIsTyping(false)
 
       try {
-        const response = await fetch('http://localhost:8000/ask', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query }),
+        const response = await axios.post(`${import.meta.env.VITE_API_URL}/ask`, { query })
+        
+        const data = response.data
+        setResponseData({
+          answer: data.answer || 'No answer was generated.',
+          sources: data.sources || []
         })
-
-        if (!response.ok) {
-          throw new Error(`Server error: ${response.status}`)
-        }
-
-        const data = await response.json()
-        setAnswer(data.answer || 'No answer was generated.')
-        setSources(data.sources || [])
       } catch (err) {
-        setError(err.message || 'Failed to get a response. Please try again.')
+        setError(err.response?.data?.message || err.message || 'Failed to get a response. Please try again.')
       } finally {
-        setLoading(false)
+        setIsLoading(false)
       }
     }
 
     fetchAnswer()
-  }, [query])
+  }, [query, setIsLoading, setResponseData])
 
   // Typing animation
   useEffect(() => {
-    if (!answer || loading) return
+    if (!answer || isLoading) return
 
     setIsTyping(true)
     let index = 0
     const speed = 12 // ms per character
+
+    setDisplayedAnswer('')
 
     const interval = setInterval(() => {
       setDisplayedAnswer(answer.slice(0, index + 1))
@@ -73,7 +71,7 @@ const QueryResponse = () => {
     }, speed)
 
     return () => clearInterval(interval)
-  }, [answer, loading])
+  }, [answer, isLoading])
 
   // Auto-scroll as answer types
   useEffect(() => {
@@ -85,15 +83,13 @@ const QueryResponse = () => {
   const handleFollowUp = (e) => {
     e.preventDefault()
     if (!followUpQuery.trim()) return
-    navigate('/response', { state: { query: followUpQuery.trim() }, replace: true })
+    setQuery(followUpQuery.trim())
     setFollowUpQuery('')
-    // Force re-fetch by resetting state
-    setAnswer('')
-    setSources([])
-    setLoading(true)
   }
 
   const handleNewSearch = () => {
+    setQuery('')
+    setResponseData(null)
     navigate('/')
   }
 
@@ -214,7 +210,7 @@ const QueryResponse = () => {
           </div>
 
           {/* Loading State */}
-          {loading && (
+          {isLoading && (
             <div className="bg-gray-50/50 border border-gray-100 rounded-2xl p-8">
               <div className="flex flex-col items-center justify-center gap-4">
                 {/* Animated spinner */}
@@ -244,7 +240,7 @@ const QueryResponse = () => {
           )}
 
           {/* Error State */}
-          {error && !loading && (
+          {error && !isLoading && (
             <div className="bg-red-50 border border-red-100 rounded-2xl p-6">
               <div className="flex items-start gap-3">
                 <div className="bg-red-100 p-2 rounded-lg shrink-0 mt-0.5">
@@ -265,7 +261,7 @@ const QueryResponse = () => {
           )}
 
           {/* Answer Content */}
-          {!loading && !error && (
+          {!isLoading && !error && (
             <div
               ref={answerRef}
               className="bg-gray-50/50 border border-gray-100 rounded-2xl p-6 md:p-8 max-h-[60vh] overflow-y-auto scroll-smooth"
@@ -281,7 +277,7 @@ const QueryResponse = () => {
         </div>
 
         {/* Sources Section */}
-        {!loading && !error && sources.length > 0 && (
+        {!isLoading && !error && sources.length > 0 && (
           <div className="mb-8">
             <div className="flex items-center gap-3 mb-4">
               <div className="bg-green-50 p-2 rounded-lg">
@@ -310,7 +306,7 @@ const QueryResponse = () => {
         )}
 
         {/* Follow-up Search */}
-        {!loading && !error && (
+        {!isLoading && !error && (
           <div className="mt-auto pt-4">
             <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent mb-6" />
             <form onSubmit={handleFollowUp}>
