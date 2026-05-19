@@ -15,7 +15,7 @@ async def run_full_ingestion(file_path: str):
     chunks = await ingestor.ingest_and_chunk(file_path)
     
     # 2. Vector DB
-    vector_db.initialize_store(chunks)
+    vector_db.upload_documents(chunks)
     
     return f"Processed {len(chunks)} chunks from {file_path}"
 

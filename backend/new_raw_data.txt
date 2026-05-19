@@ -1,0 +1,15 @@
+def calculate_average(numbers):
+    total = 0
+    for num in numbers:
+        total += num
+    return total / len(numbers)
+
+class Hello{
+    public static void main(String[] args){
+        System.out.println(4+5)
+    }
+}
+
+# Test the function
+print(calculate_average([10, 20, 30]))
+print(calculate_average([]))
