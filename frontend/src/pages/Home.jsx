@@ -1,16 +1,58 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { useNavigate } from 'react-router'
 import { useQueryData } from '../context/queryContext'
+import axios from 'axios'
 
 const Home = () => {
   const { query, setQuery, setResponseData } = useQueryData();
   const navigate = useNavigate()
+
+  // File upload specific states
+  const [isUploading, setIsUploading] = useState(false)
+  const fileInputRef = useRef(null)
 
   const handleSearch = (e) => {
     if (e) e.preventDefault()
     if (!query.trim()) return
     setResponseData(null)
     navigate('/response')
+  }
+
+ // Triggers when a file is chosen from the system dialog
+  const handlUploadFile = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    // 1. Prepare Form Data
+    const formData = new FormData()
+    formData.append('file', file)
+
+    try {
+      setIsUploading(true)
+      setResponseData(null) // Clear previous data if needed
+
+      // 2. Make the HTTP API request
+      const response = await axios.post(`${import.meta.env.VITE_API_URL}/ingest`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        }
+      })
+      
+    } catch (error) {
+      console.error("Upload failed:", error)
+      alert("Failed to upload file. Please try again.")
+    } finally {
+      setIsUploading(false)
+      // Reset the input value so user can upload the same file again if they want
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
+  // Directs the button click to the hidden HTML input element
+  const triggerFileSelect = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click()
+    }
   }
 
   const handleSuggestion = (text) => {
@@ -61,11 +103,32 @@ const Home = () => {
             className="flex-1 outline-none text-base text-gray-700 bg-transparent placeholder-gray-400 min-w-0"
           />
           <div className="flex items-center gap-2">
-            <button className="flex items-center gap-1.5 text-gray-500 hover:text-gray-800 px-3 py-2 text-sm font-medium transition-colors">
+            
+            {/* Hidden Input File Element */}
+            <input 
+              type="file"
+              ref={fileInputRef}
+              onChange={handlUploadFile}
+              className="hidden"
+              accept=".pdf,.doc,.docx,.txt" // Optional: restrict file types
+            />
+
+            {/* Custom Styled Upload Button */}
+            <button 
+              type="button"
+              onClick={triggerFileSelect} 
+              disabled={isUploading}
+              className="flex items-center gap-1.5 text-gray-500 hover:text-gray-800 px-3 py-2 text-sm font-medium transition-colors disabled:opacity-50"
+            >
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
-              Upload
+              {isUploading ? 'Uploading...' : 'Upload'}
             </button>
-            <button onClick={handleSearch} className="flex items-center gap-1.5 bg-[#7b9cce] hover:bg-[#6888bb] text-white px-5 py-2.5 rounded-full text-sm font-medium transition-colors disabled:opacity-50" disabled={!query.trim()}>
+            
+            <button 
+              onClick={handleSearch} 
+              className="flex items-center gap-1.5 bg-[#7b9cce] hover:bg-[#6888bb] text-white px-5 py-2.5 rounded-full text-sm font-medium transition-colors disabled:opacity-50" 
+              disabled={!query.trim() || isUploading}
+            >
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
               Search
             </button>
