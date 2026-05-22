@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router'
 import { useQueryData } from '../context/queryContext'
 import axios from 'axios'

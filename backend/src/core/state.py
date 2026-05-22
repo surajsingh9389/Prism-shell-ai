@@ -1,4 +1,5 @@
-from typing import List, Literal, TypedDict
+from typing import List, Literal, TypedDict, Annotated
+from langgraph.graph.message import add_messages
 
 class RetrievedDoc(TypedDict):
     content: str
@@ -19,3 +20,4 @@ class AgentState(TypedDict):
     refined_query: str
     plan: Literal["direct_answer", "retrieve"]
     thoughts: List[str]
+    messages: Annotated[list, add_messages]
