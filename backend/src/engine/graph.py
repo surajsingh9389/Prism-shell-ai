@@ -1,10 +1,18 @@
 import asyncio
+import os
+from dotenv import load_dotenv
 from langgraph.graph import StateGraph, START, END
+from langgraph.checkpoint.postgres import PostgresSaver
 from src.core.state import AgentState
 from src.agents.researcher import (
     planner, retriever_node, generator, 
     critic, refiner, route_from_planner, should_continue
 )
+
+load_dotenv()
+DB_URI = os.getenv("DATABASE_URL")
+
+
 
 def compile_workflow():
     builder = StateGraph(AgentState)
@@ -29,8 +37,10 @@ def compile_workflow():
         {"end": END, "retriever": "retriever", "refiner": "refiner"}
     )
     builder.add_edge("refiner", "retriever")
+    
+    checkpointer = PostgresSaver.from_conn_string(DB_URI)
 
-    return builder.compile()
+    return builder.compile(checkpointer=checkpointer)
 
 graph = compile_workflow()
 

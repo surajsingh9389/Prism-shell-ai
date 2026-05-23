@@ -6,7 +6,7 @@ from src.services.vector_db import VectorDBService
 ingestor = IngestionService()
 vector_db = VectorDBService()
 
-async def run_full_ingestion(file_path: str):
+async def run_full_ingestion(file_path: str, session_id: str):
     """
     This function is the 'First Method' you mentioned.
     It connects the two services together.
@@ -15,7 +15,7 @@ async def run_full_ingestion(file_path: str):
     chunks = await ingestor.ingest_and_chunk(file_path)
     
     # 2. Vector DB
-    vector_db.upload_documents(chunks)
+    vector_db.upload_documents(chunks, session_id=session_id)
     
     return f"Processed {len(chunks)} chunks from {file_path}"
 

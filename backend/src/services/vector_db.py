@@ -1,10 +1,13 @@
 from typing import List, Optional
 import os
+
 from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
 from langchain_qdrant import QdrantVectorStore, RetrievalMode
 from langchain_core.documents import Document
 from src.core.state import RetrievedDoc
+from qdrant_client import models
 # import asyncio
+
 
 class VectorDBService:
     def __init__(
@@ -89,27 +92,42 @@ class VectorDBService:
         )
         print(f"Initialized a brand new Qdrant collection schema in [{self.mode.upper()}] mode.")
         
-    def upload_documents(self, documents: List[Document]):
+    def upload_documents(self, documents: List[Document], session_id: str):
         """Appends new embeddings safely to either environment choice."""
         if not self.vectorstore:
             self.initialize_store()
             
         if documents:
+            # Inject session_id into every document metadata block before upserting
+            for doc in documents:
+                if doc.metadata is None:
+                    doc.metadata = {}
+                doc.metadata["session_id"] = session_id
             self.vectorstore.add_documents(documents=documents)
             print(f"Successfully uploaded {len(documents)} documents to [{self.mode.upper()}].")
 
-    async def search_docs(self, query: str, top_k: int = 3):
+    async def search_docs(self, query: str, session_id: str, top_k: int = 3):
         """Simple semantic search without reranking."""
         if not self.vectorstore:
             self.initialize_store()
             
-        docs_with_scores = await self.vectorstore.asimilarity_search_with_score(query, k=top_k) 
+        session_filter = models.Filter(
+            must=[
+                models.FieldCondition(
+                    key="metadata.session_id",  # LangChain nests metadata dictionaries under this path in Qdrant
+                    match=models.MatchValue(value=session_id),
+                )
+            ]
+        )
+            
+        docs_with_scores = await self.vectorstore.asimilarity_search_with_score(query, k=top_k, filter=session_filter) 
             
         final_output: List[RetrievedDoc] = []
         for doc, score in docs_with_scores:         
             final_output.append({
                 "content": doc.page_content,
                 "source": doc.metadata.get("source", "unknown"),
+                "session_id": doc.metadata.get("session_id"),
                 "retrieval_score": float(score),    
                 "rerank_score": 0.0
             })

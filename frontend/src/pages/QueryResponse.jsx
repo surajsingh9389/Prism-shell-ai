@@ -4,7 +4,7 @@ import axios from 'axios'
 import { useQueryData } from '../context/queryContext'
 
 const QueryResponse = () => {
-  const { query, setQuery, responseData, setResponseData, isLoading, setIsLoading } = useQueryData()
+  const { query, setQuery, responseData, setResponseData, isLoading, setIsLoading, sessionId } = useQueryData()
   const navigate = useNavigate()
   
   const answer = responseData?.answer || ''
@@ -34,7 +34,7 @@ const QueryResponse = () => {
       setIsTyping(false)
 
       try {
-        const response = await axios.post(`${import.meta.env.VITE_API_URL}/ask`, { query })
+        const response = await axios.post(`${import.meta.env.VITE_API_URL}/ask`, { query, session_id: sessionId })
         
         const data = response.data
         setResponseData({
@@ -49,7 +49,7 @@ const QueryResponse = () => {
     }
 
     fetchAnswer()
-  }, [query, setIsLoading, setResponseData])
+  }, [query, setIsLoading, setResponseData, sessionId])
 
   // Typing animation
   useEffect(() => {

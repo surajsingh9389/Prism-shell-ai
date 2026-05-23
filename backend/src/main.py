@@ -12,6 +12,7 @@ app = FastAPI(title="Personal Knowledge Agent")
 
 class QueryRequest(BaseModel):
     query: str
+    session_id: str
 
 class QueryResponse(BaseModel):
     answer: str
@@ -29,24 +30,39 @@ app.add_middleware(
     allow_methods=["*"],  # Allows all HTTP methods (GET, POST, PUT, DELETE)
     allow_headers=["*"],  # Allows all headers
 )
-    
+
+# --- STARTUP LIFESPAN EVENT ---
+@app.on_event("startup")
+async def startup_event():
+    """
+    Runs automatically on server startup. Initializes the Neon database tables 
+    for LangGraph if they don't already exist.
+    """
+    try:
+        # Securely sets up your checkpoints schema inside Neon once
+        graph.checkpointer.setup()
+        print("Successfully connected to Neon Postgres and verified checkpoint tables.")
+    except Exception as e:
+        print(f"Failed to initialize checkpointer schema on database: {e}")
+
+  
  
 @app.get('/')
 async def health_check():
     return {"status": "ok", "message": "Personal Knowledge Agent is running!"}    
 
 @app.post("/ingest", tags=["Ingestion"])
-async def ingest_data(file: UploadFile = File(...)):
+async def ingest_data(file: UploadFile = File(...), session_id: str = Form(...)):
     """
     Step 1: Save file locally, Chunk with Docling, and Upsert to Qdrant.
     """
-    temp_path = f"temp_{file.filename}"
+    temp_path = f"temp_{session_id}_{file.filename}"
     try:
         # Save temp file
         with open(temp_path, "wb") as f:
             f.write(await file.read())
         
-        message = await run_full_ingestion(temp_path)
+        message = await run_full_ingestion(temp_path, session_id=session_id)
         
         return {"status": "success", "message": message}
     
@@ -64,22 +80,28 @@ async def ask_researcher(request: QueryRequest):
     try:
         # Initial state for your LangGraph
         
+        config = {"configurable": {"thread_id": request.session_id}}
+        
         inputs = {
-        "query": request.query,
+        "messages": [("user", request.query)],
         "iteration": 0,
         "max_iterations": 3,
         "thoughts": []
         }
         
         # Run the graph
-        final_state = await graph.ainvoke(inputs)
+        final_state = await graph.ainvoke(inputs, config=config)
         
-        # Extract the last message from the agent
-        answer = final_state["current_answer"]
+        # Extract answers and track document source metadata
+        answer = final_state.get("current_answer", "No answer generated.")
+        retrieved_docs = final_state.get("retrieved_docs", [])
+        
+        # Safely extract origin file sources if any docs were used
+        sources = list(set([doc["source"] for doc in retrieved_docs if "source" in doc]))
         
         return QueryResponse(
             answer=answer,
-            sources=[] # You can extract source metadata from the state if needed
+            sources=sources 
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

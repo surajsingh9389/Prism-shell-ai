@@ -12,7 +12,14 @@ llm_service = LLMService()
 
 async def planner(state: AgentState) -> AgentState:
     """Decides if the query needs document retrieval or a direct answer."""
-    query = state["query"].lower()
+    
+    # Pull the newest incoming user query from the message history
+    latest_message = state["messages"][-1].content if state.get("messages") else ""
+    
+    query = latest_message.lower()
+    
+    # Cache the latest query text into the state string for the retriever to use
+    state["query"] = latest_message
     
     # Heuristics for 2026 RAG intent detection
     retrieval_keywords = [
@@ -39,9 +46,11 @@ async def generator(state: AgentState) -> AgentState:
     """Generates an answer based on the planner's decision and retrieved context."""
     query = state["query"]
     
+    chat_history = state.get("messages", [])[:-1] # History excluding the very last query
+    
     if state["plan"] == "direct_answer":
-        system_msg = "Answer the question directly based on your general knowledge."
-        user_msg = f"Question: {query}"
+        system_msg = "Answer the question directly based on your general knowledge and chat history."
+        user_msg = f"Conversation History:\n{chat_history}\n\nQuestion: {query}"
         answer = await llm_service.generate_text(system_msg, user_msg)
     else:
         docs = state.get("retrieved_docs", [])
@@ -53,7 +62,8 @@ async def generator(state: AgentState) -> AgentState:
         context_str = "\n\n".join([f"{d['content']} (Source: {d['source']})" for d in docs])
         
         # Using the LangChain Prompt Templates from core/prompts.py
-        prompt_value = GENERATOR_PROMPT.invoke({"context": context_str, "query": query})
+        prompt_value = GENERATOR_PROMPT.invoke({"context": context_str, 
+        "query": f"Chat History for Context:\n{chat_history}\n\nCurrent Query: {query}"})
         
         # Extract system and human messages from the template
         system_msg = prompt_value.messages[0].content
@@ -62,11 +72,8 @@ async def generator(state: AgentState) -> AgentState:
         answer = await llm_service.generate_text(system_msg, user_msg)
 
     state["current_answer"] = answer
-    # print('-'*70)
-    # print(answer)
-    # print('-'*70)
     state["thoughts"].append("Generator: Answer synthesized.")
-    return state
+    return {"current_answer": answer, "messages": [("assistant", answer)]}
 
 
 async def critic(state: AgentState) -> AgentState:

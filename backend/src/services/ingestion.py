@@ -37,7 +37,7 @@ class IngestionService:
             clean_metadata = {
                 "source": source_name,
                 "chunk_id": idx,
-                "heading": doc.metadata.get("dl_meta", {}).get("headings", ["None"])[-1]
+                "heading": doc.metadata.get("dl_meta", {}).get("headings", ["None"])[-1],
             }
             
             # Use the page_content directly from Docling's Markdown export

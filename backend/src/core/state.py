@@ -4,6 +4,7 @@ from langgraph.graph.message import add_messages
 class RetrievedDoc(TypedDict):
     content: str
     source: str
+    session_id: str
     retrieval_score: float
     rerank_score: float
 

@@ -4,7 +4,7 @@ import { useQueryData } from '../context/queryContext'
 import axios from 'axios'
 
 const Home = () => {
-  const { query, setQuery, setResponseData } = useQueryData();
+  const { query, setQuery, setResponseData, sessionId } = useQueryData();
   const navigate = useNavigate()
 
   // File upload specific states
@@ -26,6 +26,7 @@ const Home = () => {
     // 1. Prepare Form Data
     const formData = new FormData()
     formData.append('file', file)
+    formData.append('session_id', sessionId)
 
     try {
       setIsUploading(true)
