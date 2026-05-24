@@ -1,14 +1,30 @@
-from src.engine.graph import graph
-
 import os
+import traceback
 import asyncio
+from contextlib import asynccontextmanager
 from pydantic import BaseModel
 from typing import List
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request
 from src.engine.data_manager import run_full_ingestion
 from fastapi.middleware.cors import CORSMiddleware
+from src.engine.graph import db_pool, get_runtime_graph_with_pool
+from fastapi.responses import JSONResponse
 
-app = FastAPI(title="Personal Knowledge Agent")
+# Define server lifecycle hooks
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # This runs ONCE when Uvicorn boots up
+    print("Connecting to PostgreSQL Connection Pool...")
+    await db_pool.open() 
+    
+    yield  # --- The server runs and handles traffic here ---
+    
+    # This runs ONCE when you close/stop the server
+    print("Closing PostgreSQL Connection Pool safely...")
+    await db_pool.close()
+
+
+app = FastAPI(title="Personal Knowledge Agent", lifespan=lifespan)
 
 class QueryRequest(BaseModel):
     query: str
@@ -31,19 +47,22 @@ app.add_middleware(
     allow_headers=["*"],  # Allows all headers
 )
 
-# --- STARTUP LIFESPAN EVENT ---
-@app.on_event("startup")
-async def startup_event():
-    """
-    Runs automatically on server startup. Initializes the Neon database tables 
-    for LangGraph if they don't already exist.
-    """
+
+@app.middleware("http")
+async def catch_exceptions_middleware(request: Request, call_next):
     try:
-        # Securely sets up your checkpoints schema inside Neon once
-        graph.checkpointer.setup()
-        print("Successfully connected to Neon Postgres and verified checkpoint tables.")
+        return await call_next(request)
     except Exception as e:
-        print(f"Failed to initialize checkpointer schema on database: {e}")
+        # This physically forces the error into your VS Code / PowerShell terminal window
+        print("\n" + "="*50 + " DETECTED BACKEND CRASH " + "="*50)
+        traceback.print_exc()
+        print("="*124 + "\n")
+        
+        # Returns a clear JSON message back to the frontend instead of an empty 500
+        return JSONResponse(
+            status_code=500,
+            content={"status": "error", "message": str(e), "type": type(e).__name__}
+        )
 
   
  
@@ -75,12 +94,14 @@ async def ingest_data(file: UploadFile = File(...), session_id: str = Form(...))
 @app.post("/ask", response_model=QueryResponse, tags=["Agent"])
 async def ask_researcher(request: QueryRequest):
     """
-    Step 2: Invoke the LangGraph researcher agent.
-    """
-    try:
-        # Initial state for your LangGraph
+    Invoke the LangGraph researcher agent.
+    """      
+    # Rent a lightning-fast, pre-warmed connection socket from the active pool
+    async with db_pool.connection() as conn:
+        # Pass that live connection directly to compile the graph instantly
+        runnable_agent = await get_runtime_graph_with_pool(conn)
         
-        config = {"configurable": {"thread_id": request.session_id}}
+        config = {"configurable": {"thread_id": request.session_id, "session_id": request.session_id}}
         
         inputs = {
         "messages": [("user", request.query)],
@@ -90,7 +111,7 @@ async def ask_researcher(request: QueryRequest):
         }
         
         # Run the graph
-        final_state = await graph.ainvoke(inputs, config=config)
+        final_state = await runnable_agent.ainvoke(inputs, config=config)
         
         # Extract answers and track document source metadata
         answer = final_state.get("current_answer", "No answer generated.")
@@ -103,35 +124,4 @@ async def ask_researcher(request: QueryRequest):
             answer=answer,
             sources=sources 
         )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-# if __name__ == "__main__":
-#     import uvicorn
-#     uvicorn.run("src.main:app", host="0.0.0.0", port=8000, reload=True)
-
-# async def main():
-#     # 1. POPULATE THE BRAIN
-#     print("--- Phase 1: Ingesting Data ---")
-#     file_to_process = "raw_data.txt"
-#     await run_full_ingestion(file_to_process)
-    
-#     # 2. RUN THE AGENT
-#     print("\n--- Phase 2: Running Agentic Research ---")
-#     inputs = {
-        
-#         "query": "summarize my document",
-#         "iteration": 0,
-#         "max_iterations": 3,
-#         "thoughts": []
-#     }
-    
-#     # Use astream for that 2026 "live" feel
-#     async for event in graph.astream(inputs):
-#         for node_name, state_update in event.items():
-#             print(f"[{node_name}] is processing...")
-#             if "current_answer" in state_update:
-#                 print(f"Result: {state_update['current_answer']}")
-
-# if __name__ == "__main__":
-#     asyncio.run(main())

@@ -2,7 +2,8 @@ import asyncio
 import os
 from dotenv import load_dotenv
 from langgraph.graph import StateGraph, START, END
-from langgraph.checkpoint.postgres import PostgresSaver
+from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+from psycopg_pool import AsyncConnectionPool
 from src.core.state import AgentState
 from src.agents.researcher import (
     planner, retriever_node, generator, 
@@ -13,8 +14,12 @@ load_dotenv()
 DB_URI = os.getenv("DATABASE_URL")
 
 
+# Create a global, reusable connection pool container
+# This stays alive for the entire lifespan of your backend server process
+db_pool = AsyncConnectionPool(conninfo=DB_URI, max_size=10, open=False)
 
-def compile_workflow():
+
+def create_graph_builder() -> StateGraph:
     builder = StateGraph(AgentState)
 
     builder.add_node("planner", planner)
@@ -38,11 +43,20 @@ def compile_workflow():
     )
     builder.add_edge("refiner", "retriever")
     
-    checkpointer = PostgresSaver.from_conn_string(DB_URI)
+    return builder
 
+async def get_runtime_graph_with_pool(conn):
+    """
+    Accepts an already-open connection from our active pool, 
+    saving execution time on connection handshakes.
+    """
+    # Use the active connection passed from the pool hook
+    checkpointer = AsyncPostgresSaver(conn)
+    
+    await checkpointer.setup()
+    
+    builder = create_graph_builder()
     return builder.compile(checkpointer=checkpointer)
-
-graph = compile_workflow()
 
 
 

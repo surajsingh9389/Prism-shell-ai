@@ -1,10 +1,11 @@
 import json
-from typing import Literal
+from typing import Literal, Optional
 
 from src.core.state import AgentState
 from src.core.prompts import GENERATOR_PROMPT, EVALUATOR_PROMPT, REFINER_PROMPT
 from src.services.llm import LLMService
 from src.engine.data_manager import vector_db
+from langchain_core.runnables import RunnableConfig
 
 llm_service = LLMService()
 
@@ -33,11 +34,18 @@ async def planner(state: AgentState) -> AgentState:
     return state
 
 
-async def retriever_node(state: AgentState) -> dict:
+async def retriever_node(state: AgentState, config: Optional[RunnableConfig] = None) -> dict:
     """Fetches and reranks documents from Qdrant."""
     query = state["query"]
-    # We use the service we built to handle hybrid search + reranking
-    processed_docs = await vector_db.search_docs(query, top_k=3)
+    
+    session_id = None
+    if config and "configurable" in config:
+        session_id = config["configurable"].get("session_id")
+        
+    if not session_id:
+        raise ValueError("Security Boundary Error: Missing 'session_id' inside graph context configuration.")
+    
+    processed_docs = await vector_db.search_docs(query, session_id=session_id, top_k=3)
     
     return {"retrieved_docs": processed_docs}
 
