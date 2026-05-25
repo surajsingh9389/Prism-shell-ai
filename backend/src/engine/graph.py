@@ -45,16 +45,12 @@ def create_graph_builder() -> StateGraph:
     
     return builder
 
-async def get_runtime_graph_with_pool(conn):
+def get_runtime_graph_with_pool(conn):
     """
-    Accepts an already-open connection from our active pool, 
-    saving execution time on connection handshakes.
+    Binds the checkpointer smoothly to the pooled connection.
+    No database setup runs here, keeping database tasks clear.
     """
-    # Use the active connection passed from the pool hook
     checkpointer = AsyncPostgresSaver(conn)
-    
-    await checkpointer.setup()
-    
     builder = create_graph_builder()
     return builder.compile(checkpointer=checkpointer)
 

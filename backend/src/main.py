@@ -8,18 +8,26 @@ from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request
 from src.engine.data_manager import run_full_ingestion
 from fastapi.middleware.cors import CORSMiddleware
 from src.engine.graph import db_pool, get_runtime_graph_with_pool
+from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from fastapi.responses import JSONResponse
 
-# Define server lifecycle hooks
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # This runs ONCE when Uvicorn boots up
+    # 1. Warm up the background connection pools
     print("Connecting to PostgreSQL Connection Pool...")
     await db_pool.open() 
     
-    yield  # --- The server runs and handles traffic here ---
+    # 2. Open an independent autocommit connection to setup tables cleanly
+    # This disables transaction locks, allowing CREATE INDEX CONCURRENTLY to work!
+
+    async with db_pool.connection() as conn:
+        await conn.set_autocommit(True) # <--- THIS SAYS: "No transaction wrappers please!"
+        print("Verifying LangGraph database tracking schemas...")
+        checkpointer = AsyncPostgresSaver(conn)
+        await checkpointer.setup()
     
-    # This runs ONCE when you close/stop the server
+    yield  # --- FastAPI server runs here ---
+    
     print("Closing PostgreSQL Connection Pool safely...")
     await db_pool.close()
 
@@ -99,7 +107,7 @@ async def ask_researcher(request: QueryRequest):
     # Rent a lightning-fast, pre-warmed connection socket from the active pool
     async with db_pool.connection() as conn:
         # Pass that live connection directly to compile the graph instantly
-        runnable_agent = await get_runtime_graph_with_pool(conn)
+        runnable_agent = get_runtime_graph_with_pool(conn)
         
         config = {"configurable": {"thread_id": request.session_id, "session_id": request.session_id}}
         
