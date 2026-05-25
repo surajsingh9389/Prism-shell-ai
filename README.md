@@ -4,14 +4,14 @@
                 └─────────┬────────────┘
                           ↓
                 ┌──────────────────────┐
-                │  Ingestion Pipeline  │
-                │ (chunk + embed)      │
-                └─────────┬────────────┘
-                          ↓
-                ┌──────────────────────┐
-                │ Hybrid Index         │
-                │ FAISS + BM25         │
-                └─────────┬────────────┘
+                │   Docling chunking   │────────────┐
+                │                      │            |   
+                └─────────┬────────────┘            |  
+                          ↓                         | ───────────────→ Ingestion pipeline
+                ┌──────────────────────┐            |
+                │       Qdrant         │            |
+                │      vector-store    │            |
+                └─────────┬────────────┘────────────┘
 
 
 User Query ───────────────→ Planner Node
@@ -19,7 +19,7 @@ User Query ───────────────→ Planner Node
         ┌────────────────────┼────────────────────┐
         ↓                                         ↓
 Direct Answer Path                    Retrieval Path
-(no docs needed)                      (docs needed)
+(no docs needed)                      (docs needed, qdrant similarity search)
         ↓                                         ↓
         └──────────────→ Generator Node ←─────────┘
                                 ↓

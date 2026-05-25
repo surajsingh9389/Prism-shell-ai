@@ -17,7 +17,7 @@ async def lifespan(app: FastAPI):
     print("Connecting to PostgreSQL Connection Pool...")
     await db_pool.open() 
     
-    # 2. Open an independent autocommit connection to setup tables cleanly
+    # Open an independent autocommit connection to setup tables cleanly
     # This disables transaction locks, allowing CREATE INDEX CONCURRENTLY to work!
 
     async with db_pool.connection() as conn:
