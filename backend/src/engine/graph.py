@@ -54,13 +54,3 @@ def get_runtime_graph_with_pool(conn):
     builder = create_graph_builder()
     return builder.compile(checkpointer=checkpointer)
 
-
-
-# if __name__ == "__main__":
-#     inputs = {
-#         "query": "summarize my document",
-#         "iteration": 0,
-#         "max_iterations": 3,
-#         "thoughts": []
-#     }
-#     asyncio.run(graph.ainvoke(inputs))

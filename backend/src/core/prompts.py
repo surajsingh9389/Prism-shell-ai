@@ -1,6 +1,6 @@
 from langchain_core.prompts import ChatPromptTemplate
 
-# 1. Generator Prompt
+#  Generator Prompt
 GENERATOR_PROMPT = ChatPromptTemplate.from_messages([
     ("system", "You must answer the question using ONLY the provided context. "
                "STRICT RULES: Do NOT use outside knowledge. "
@@ -10,7 +10,7 @@ GENERATOR_PROMPT = ChatPromptTemplate.from_messages([
     ("user", "Context:\n{context}\n\nQuestion:\n{query}")
 ])
 
-# 2. Evaluator Prompt
+# Evaluator Prompt
 EVALUATOR_PROMPT = ChatPromptTemplate.from_messages([
     ("system", (
         "You are an evaluator that assesses answer quality based on context and query.\n\n"
@@ -29,7 +29,7 @@ EVALUATOR_PROMPT = ChatPromptTemplate.from_messages([
     ("user", "QUERY: {query}\n\nCONTEXT: {context}\n\nANSWER: {answer}")
 ])
 
-# 3. Refiner Prompt
+# Refiner Prompt
 REFINER_PROMPT = ChatPromptTemplate.from_messages([
     ("system", "You are a query optimization expert. Rewrite the user query to improve retrieval quality. "
                "Make it specific, add technical keywords, but keep intent same. "

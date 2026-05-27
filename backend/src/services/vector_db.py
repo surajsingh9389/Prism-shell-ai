@@ -18,7 +18,7 @@ class VectorDBService:
         self.collection_name = collection_name
         
         # It handles the embedding generation locally with high optimization
-        self.embeddings = FastEmbedEmbeddings(model_name=model_name)
+        self.embeddings = FastEmbedEmbeddings(model_name=model_name, cache_dir="E:/AI_Projects/Autonomous Research Analyst/backend/.fastembed_cache")
         self.vectorstore = None
         
         # Determine the environment mode: "local" or "cloud" (defaults to local)
@@ -137,38 +137,3 @@ class VectorDBService:
     
     
     
-
-
-# # For local testing
-# if __name__ == "__main__":
-#     service = VectorDBService()
-#     # Ensure you have a dummy file or update path to test
-
-#     raw_docs = [
-#     Document(
-#         page_content="# Quarterly Financial Overview\nThis report outlines the fiscal performance for Q3 2024, focusing on regional growth and operational expenses.",
-#         metadata={
-#             "source": "financial_report.pdf",
-#             "chunk_id": 0,
-#             "heading": "Quarterly Financial Overview"
-#         }
-#     ),
-#     Document(
-#         page_content="| Department | Budget | Actual | Variance |\n|---|---|---|---|\n| Marketing | $50,000 | $48,500 | -$1,500 |\n| Engineering | $120,000 | $125,000 | +$5,000 |\n| Sales | $75,000 | $70,000 | -$5,000 |",
-#         metadata={
-#             "source": "financial_report.pdf",
-#             "chunk_id": 1,
-#             "heading": "Expenditure Table"
-#         }
-#     ),
-#     Document(
-#         page_content="## Key Takeaways\nOverall, the company remains under budget by 2% despite the slight overage in the Engineering department due to cloud infrastructure scaling.",
-#         metadata={
-#             "source": "financial_report.pdf",
-#             "chunk_id": 2,
-#             "heading": "Key Takeaways"
-#         }
-#     )
-# ]
-#     service.initialize_store(documents=raw_docs)
-#     asyncio.run(service.search_docs("What department overspent?"))

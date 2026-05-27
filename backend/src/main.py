@@ -13,7 +13,7 @@ from fastapi.responses import JSONResponse
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 1. Warm up the background connection pools
+    # Warm up the background connection pools
     print("Connecting to PostgreSQL Connection Pool...")
     await db_pool.open() 
     
@@ -81,7 +81,7 @@ async def health_check():
 @app.post("/ingest", tags=["Ingestion"])
 async def ingest_data(file: UploadFile = File(...), session_id: str = Form(...)):
     """
-    Step 1: Save file locally, Chunk with Docling, and Upsert to Qdrant.
+    Save file locally, Chunk with Docling, and Upsert to Qdrant.
     """
     temp_path = f"temp_{session_id}_{file.filename}"
     try:

@@ -18,6 +18,3 @@ async def run_full_ingestion(file_path: str, session_id: str):
     vector_db.upload_documents(chunks, session_id=session_id)
     
     return f"Processed {len(chunks)} chunks from {file_path}"
-
-# if __name__ == "__main__":
-#     asyncio.run(run_full_ingestion("raw_data.txt"))

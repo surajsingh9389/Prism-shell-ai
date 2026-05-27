@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 raw_data.txt
+.fastembed_cache
 
 # Environments (Virtual Envs)
 .env
