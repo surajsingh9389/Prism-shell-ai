@@ -1,112 +1,183 @@
-import { useState, useRef } from 'react'
-import { useNavigate } from 'react-router'
-import { useQueryData } from '../context/queryContext'
-import axios from 'axios'
+import { useState, useRef } from "react";
+import { useNavigate } from "react-router";
+import { useQueryData } from "../context/queryContext";
+import axios from "axios";
 
 const Home = () => {
   const { query, setQuery, setResponseData, sessionId } = useQueryData();
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
   // File upload specific states
-  const [isUploading, setIsUploading] = useState(false)
-  const fileInputRef = useRef(null)
+  const [isUploading, setIsUploading] = useState(false);
+  const [isUpload, setIsUpload] = useState(false);
+  const fileInputRef = useRef(null);
 
   const handleSearch = (e) => {
-    if (e) e.preventDefault()
-    if (!query.trim()) return
-    setResponseData(null)
-    navigate('/response')
-  }
+    if (e) e.preventDefault();
+    if (!query.trim()) return;
+    setResponseData(null);
+    navigate("/response");
+  };
 
- // Triggers when a file is chosen from the system dialog
+  // Triggers when a file is chosen from the system dialog
   const handlUploadFile = async (e) => {
-    const file = e.target.files[0]
-    if (!file) return
+    const file = e.target.files[0];
+    if (!file) return;
 
     // 1. Prepare Form Data
-    const formData = new FormData()
-    formData.append('file', file)
-    formData.append('session_id', sessionId)
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("session_id", sessionId);
 
     try {
-      setIsUploading(true)
-      setResponseData(null) // Clear previous data if needed
+      setIsUploading(true);
+      setIsUpload(false);
+      setResponseData(null); // Clear previous data if needed
 
       // 2. Make the HTTP API request
-      const response = await axios.post(`${import.meta.env.VITE_API_URL}/ingest`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        }
-      })
-      
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL}/ingest`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        },
+      );
+
+      setIsUpload(true);
+
+      // AUTO-RESET SUCCESS STATE AFTER 3 SECONDS
+      setTimeout(() => {
+        setIsUpload(false);
+      }, 3000);
     } catch (error) {
-      console.error("Upload failed:", error)
-      alert("Failed to upload file. Please try again.")
+      console.error("Upload failed:", error);
+      alert("Failed to upload file. Please try again.");
+      setIsUpload(false);
     } finally {
-      setIsUploading(false)
+      setIsUploading(false);
       // Reset the input value so user can upload the same file again if they want
-      if (fileInputRef.current) fileInputRef.current.value = ''
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
-  }
+  };
 
   // Directs the button click to the hidden HTML input element
   const triggerFileSelect = () => {
     if (fileInputRef.current) {
-      fileInputRef.current.click()
+      fileInputRef.current.click();
     }
-  }
+  };
 
   const handleSuggestion = (text) => {
-    setQuery(text)
-    setResponseData(null)
-    navigate('/response')
-  }
+    setQuery(text);
+    setResponseData(null);
+    navigate("/response");
+  };
   return (
     <div className="min-h-screen flex flex-col font-sans text-gray-900 bg-white">
       {/* Header */}
       <header className="flex justify-between items-center p-4 border-b border-gray-100">
         <div className="flex items-center gap-2">
           <div className="bg-[#1a56db] p-1.5 rounded-lg">
-             {/* Robot icon approx */}
-             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect width="18" height="18" x="3" y="3" rx="2"/>
-                <path d="M7 9h.01"/><path d="M17 9h.01"/><path d="M9 15h6"/>
-             </svg>
+            {/* Robot icon approx */}
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="white"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <rect width="18" height="18" x="3" y="3" rx="2" />
+              <path d="M7 9h.01" />
+              <path d="M17 9h.01" />
+              <path d="M9 15h6" />
+            </svg>
           </div>
           <span className="font-bold text-xl tracking-tight">AI Dashboard</span>
         </div>
         <div className="flex items-center gap-4 text-gray-500">
           <button className="hover:text-gray-900 transition-colors">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
           </button>
           <button className="p-1 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
           </button>
         </div>
       </header>
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col items-center pt-24 px-4 w-full max-w-5xl mx-auto">
-        <h1 className="text-4xl md:text-5xl font-bold mb-4 text-center">How can I help you today?</h1>
-        <p className="text-gray-500 text-lg mb-10 text-center">Ask questions, analyze documents, or get instant insights powered by AI.</p>
+        <h1 className="text-4xl md:text-5xl font-bold mb-4 text-center">
+          How can I help you today?
+        </h1>
+        <p className="text-gray-500 text-lg mb-10 text-center">
+          Ask questions, analyze documents, or get instant insights powered by
+          AI.
+        </p>
 
         {/* Search Bar */}
         <div className="w-full max-w-3xl flex items-center bg-white border border-gray-200 rounded-full px-2 py-2 shadow-sm focus-within:ring-2 focus-within:ring-blue-100 focus-within:border-blue-300 transition-all mb-6">
           <div className="pl-4 pr-2 text-[#7b9cce]">
-             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
+              <path d="M20 3v4" />
+              <path d="M22 5h-4" />
+              <path d="M4 17v2" />
+              <path d="M5 18H3" />
+            </svg>
           </div>
-          <input 
-            type="text" 
+          <input
+            type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSearch(e)}
-            placeholder="Ask anything or search your documents..." 
+            onKeyDown={(e) => e.key === "Enter" && handleSearch(e)}
+            placeholder="Ask anything or search your documents..."
             className="flex-1 outline-none text-base text-gray-700 bg-transparent placeholder-gray-400 min-w-0"
           />
           <div className="flex items-center gap-2">
-            
             {/* Hidden Input File Element */}
-            <input 
+            <input
               type="file"
               ref={fileInputRef}
               onChange={handlUploadFile}
@@ -115,22 +186,84 @@ const Home = () => {
             />
 
             {/* Custom Styled Upload Button */}
-            <button 
+            <button
               type="button"
-              onClick={triggerFileSelect} 
+              onClick={triggerFileSelect}
               disabled={isUploading}
-              className="flex items-center gap-1.5 text-gray-500 hover:text-gray-800 px-3 py-2 text-sm font-medium transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 text-gray-500 hover:text-gray-800 px-3 py-2 text-sm font-medium transition-colors disabled:opacity-70"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
-              {isUploading ? 'Uploading...' : 'Upload'}
+              {/* 1. Show Spinner when uploading */}
+              {isUploading && (
+                <svg
+                  className="animate-spin h-4 w-4 text-blue-600"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+              )}
+
+              {/* 2. Show Default Upload Icon only when NOT uploading and NOT uploaded */}
+              {!isUploading && !isUpload && (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" x2="12" y1="3" y2="15" />
+                </svg>
+              )}
+
+              {/* 3. Button Text State Switcher */}
+              <span className={isUpload ? "text-green-600 font-semibold" : ""}>
+                {isUploading
+                  ? "Uploading..."
+                  : isUpload
+                    ? "✔️ Uploaded"
+                    : "Upload"}
+              </span>
             </button>
-            
-            <button 
-              onClick={handleSearch} 
-              className="flex items-center gap-1.5 bg-[#7b9cce] hover:bg-[#6888bb] text-white px-5 py-2.5 rounded-full text-sm font-medium transition-colors disabled:opacity-50" 
+
+            <button
+              onClick={handleSearch}
+              className="flex items-center gap-1.5 bg-[#7b9cce] hover:bg-[#6888bb] text-white px-5 py-2.5 rounded-full text-sm font-medium transition-colors disabled:opacity-50"
               disabled={!query.trim() || isUploading}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.3-4.3" />
+              </svg>
               Search
             </button>
           </div>
@@ -139,13 +272,22 @@ const Home = () => {
         {/* Suggestions */}
         <div className="flex flex-wrap items-center justify-center gap-3 mb-12">
           <span className="text-gray-500 text-sm">Try:</span>
-          <button onClick={() => handleSuggestion('Summarize my documents')} className="bg-gray-50 hover:bg-gray-100 border border-gray-100 text-gray-600 px-4 py-1.5 rounded-full text-sm transition-colors">
+          <button
+            onClick={() => handleSuggestion("Summarize my documents")}
+            className="bg-gray-50 hover:bg-gray-100 border border-gray-100 text-gray-600 px-4 py-1.5 rounded-full text-sm transition-colors"
+          >
             Summarize my documents
           </button>
-          <button onClick={() => handleSuggestion('Find key insights')} className="bg-gray-50 hover:bg-gray-100 border border-gray-100 text-gray-600 px-4 py-1.5 rounded-full text-sm transition-colors">
+          <button
+            onClick={() => handleSuggestion("Find key insights")}
+            className="bg-gray-50 hover:bg-gray-100 border border-gray-100 text-gray-600 px-4 py-1.5 rounded-full text-sm transition-colors"
+          >
             Find key insights
           </button>
-          <button onClick={() => handleSuggestion('Compare reports')} className="bg-gray-50 hover:bg-gray-100 border border-gray-100 text-gray-600 px-4 py-1.5 rounded-full text-sm transition-colors">
+          <button
+            onClick={() => handleSuggestion("Compare reports")}
+            className="bg-gray-50 hover:bg-gray-100 border border-gray-100 text-gray-600 px-4 py-1.5 rounded-full text-sm transition-colors"
+          >
             Compare reports
           </button>
         </div>
@@ -155,47 +297,116 @@ const Home = () => {
           {/* Card 1 */}
           <div className="flex flex-col items-center text-center p-6 rounded-2xl border border-gray-100 bg-white hover:shadow-sm transition-shadow cursor-pointer">
             <div className="text-gray-400 mb-4 bg-gray-50 p-2 rounded-lg">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+                <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+                <path d="M10 9H8" />
+                <path d="M16 13H8" />
+                <path d="M16 17H8" />
+              </svg>
             </div>
-            <h3 className="font-semibold text-gray-900 text-sm mb-1">Analyze Document</h3>
-            <p className="text-gray-500 text-xs">Extract insights from your files</p>
+            <h3 className="font-semibold text-gray-900 text-sm mb-1">
+              Analyze Document
+            </h3>
+            <p className="text-gray-500 text-xs">
+              Extract insights from your files
+            </p>
           </div>
-          
+
           {/* Card 2 */}
           <div className="flex flex-col items-center text-center p-6 rounded-2xl border border-gray-100 bg-white hover:shadow-sm transition-shadow cursor-pointer">
             <div className="text-gray-400 mb-4 bg-gray-50 p-2 rounded-lg">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
             </div>
-            <h3 className="font-semibold text-gray-900 text-sm mb-1">Start Conversation</h3>
+            <h3 className="font-semibold text-gray-900 text-sm mb-1">
+              Start Conversation
+            </h3>
             <p className="text-gray-500 text-xs">Chat with your AI assistant</p>
           </div>
 
           {/* Card 3 */}
           <div className="flex flex-col items-center text-center p-6 rounded-2xl border border-gray-100 bg-white hover:shadow-sm transition-shadow cursor-pointer">
             <div className="text-gray-400 mb-4 bg-gray-50 p-2 rounded-lg">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+              </svg>
             </div>
-            <h3 className="font-semibold text-gray-900 text-sm mb-1">Quick Summary</h3>
-            <p className="text-gray-500 text-xs">Get instant document summaries</p>
+            <h3 className="font-semibold text-gray-900 text-sm mb-1">
+              Quick Summary
+            </h3>
+            <p className="text-gray-500 text-xs">
+              Get instant document summaries
+            </p>
           </div>
 
           {/* Card 4 */}
           <div className="flex flex-col items-center text-center p-6 rounded-2xl border border-gray-100 bg-white hover:shadow-sm transition-shadow cursor-pointer">
             <div className="text-gray-400 mb-4 bg-gray-50 p-2 rounded-lg">
-               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1.3.5 2.6 1.5 3.5.8.8 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1.3.5 2.6 1.5 3.5.8.8 1.3 1.5 1.5 2.5" />
+                <path d="M9 18h6" />
+                <path d="M10 22h4" />
+              </svg>
             </div>
-            <h3 className="font-semibold text-gray-900 text-sm mb-1">Generate Ideas</h3>
-            <p className="text-gray-500 text-xs">Brainstorm with AI assistance</p>
+            <h3 className="font-semibold text-gray-900 text-sm mb-1">
+              Generate Ideas
+            </h3>
+            <p className="text-gray-500 text-xs">
+              Brainstorm with AI assistance
+            </p>
           </div>
         </div>
       </main>
 
       {/* Footer */}
       <footer className="text-center p-6 text-xs text-gray-400 mt-auto pb-8 border-t border-gray-50">
-        AI responses may not always be accurate. Please verify important information.
+        AI responses may not always be accurate. Please verify important
+        information.
       </footer>
     </div>
-  )
-}
+  );
+};
 
-export default Home
+export default Home;
