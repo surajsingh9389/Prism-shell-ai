@@ -7,7 +7,8 @@ from typing import List
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request
 from src.engine.data_manager import run_full_ingestion
 from fastapi.middleware.cors import CORSMiddleware
-from src.engine.graph import db_pool, get_runtime_graph_with_pool
+from src.engine.graph import get_runtime_graph_with_pool
+from src.core.database import db_pool
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from fastapi.responses import JSONResponse
 
@@ -104,32 +105,30 @@ async def ask_researcher(request: QueryRequest):
     """
     Invoke the LangGraph researcher agent.
     """      
-    # Rent a lightning-fast, pre-warmed connection socket from the active pool
-    async with db_pool.connection() as conn:
-        # Pass that live connection directly to compile the graph instantly
-        runnable_agent = get_runtime_graph_with_pool(conn)
-        
-        config = {"configurable": {"thread_id": request.session_id, "session_id": request.session_id}}
-        
-        inputs = {
-        "messages": [("user", request.query)],
-        "iteration": 0,
-        "max_iterations": 3,
-        "thoughts": []
-        }
-        
-        # Run the graph
-        final_state = await runnable_agent.ainvoke(inputs, config=config)
-        
-        # Extract answers and track document source metadata
-        answer = final_state.get("current_answer", "No answer generated.")
-        retrieved_docs = final_state.get("retrieved_docs", [])
-        
-        # Safely extract origin file sources if any docs were used
-        sources = list(set([doc["source"] for doc in retrieved_docs if "source" in doc]))
-        
-        return QueryResponse(
-            answer=answer,
-            sources=sources 
-        )
+    # Pass that live connection directly to compile the graph instantly
+    runnable_agent = get_runtime_graph_with_pool(db_pool)
+    
+    config = {"configurable": {"thread_id": request.session_id, "session_id": request.session_id}}
+    
+    inputs = {
+    "messages": [("user", request.query)],
+    "iteration": 0,
+    "max_iterations": 3,
+    "thoughts": []
+    }
+    
+    # Run the graph
+    final_state = await runnable_agent.ainvoke(inputs, config=config)
+    
+    # Extract answers and track document source metadata
+    answer = final_state.get("current_answer", "No answer generated.")
+    retrieved_docs = final_state.get("retrieved_docs", [])
+    
+    # Safely extract origin file sources if any docs were used
+    sources = list(set([doc["source"] for doc in retrieved_docs if "source" in doc]))
+    
+    return QueryResponse(
+        answer=answer,
+        sources=sources 
+    )
 
