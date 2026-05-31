@@ -104,7 +104,7 @@ class VectorDBService:
                     doc.metadata = {}
                 doc.metadata["session_id"] = session_id
             self.vectorstore.add_documents(documents=documents)
-            print(f"Successfully uploaded {len(documents)} documents to [{self.mode.upper()}].")
+            
 
     async def search_docs(self, query: str, session_id: str, top_k: int = 3):
         """Simple semantic search without reranking."""
@@ -131,8 +131,6 @@ class VectorDBService:
                 "retrieval_score": float(score),    
                 "rerank_score": 0.0
             })
-        
-        print(final_output)
         return final_output
     
     

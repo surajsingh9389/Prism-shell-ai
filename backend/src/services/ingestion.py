@@ -44,7 +44,4 @@ class IngestionService:
             doc.metadata = clean_metadata
             final_cleaned_chunks.append(doc)
         
-        print("Final Chunks after Docling Processing:")
-        print(final_cleaned_chunks)
-        print('-'*70)
         return final_cleaned_chunks
