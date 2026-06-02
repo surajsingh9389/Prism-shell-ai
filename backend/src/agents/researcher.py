@@ -36,6 +36,10 @@ async def planner(state: AgentState) -> AgentState:
 
 async def retriever_node(state: AgentState, config: Optional[RunnableConfig] = None) -> dict:
     """Fetches and reranks documents from Qdrant."""
+     
+    if(state["plan"] != "retrieve"):
+        return {"retrieved_docs": []}  # No retrieval needed, return empty context
+    
     query = state["query"]
     
     session_id = None

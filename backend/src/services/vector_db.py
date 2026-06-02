@@ -131,6 +131,8 @@ class VectorDBService:
                 "retrieval_score": float(score),    
                 "rerank_score": 0.0
             })
+        
+        print(final_output)
         return final_output
     
     
