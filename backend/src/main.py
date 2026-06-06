@@ -1,16 +1,25 @@
 import os
+import shutil
 import traceback
 import asyncio
 from contextlib import asynccontextmanager
 from pydantic import BaseModel
 from typing import List
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request, BackgroundTasks
 from src.engine.data_manager import run_full_ingestion
 from fastapi.middleware.cors import CORSMiddleware
 from src.engine.graph import get_runtime_graph_with_pool
 from src.core.database import db_pool
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from fastapi.responses import JSONResponse
+
+
+# Define a simple standalone cleanup function
+def remove_temp_file(file_path: str):
+    if os.path.exists(file_path):
+        os.remove(file_path)
+        print(f"Cleaned up temporary file: {file_path}")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -80,25 +89,23 @@ async def health_check():
     return {"status": "ok", "message": "Personal Knowledge Agent is running!"}    
 
 @app.post("/ingest", tags=["Ingestion"])
-async def ingest_data(file: UploadFile = File(...), session_id: str = Form(...)):
+async def ingest_data(background_tasks: BackgroundTasks, file: UploadFile = File(...), session_id: str = Form(...)):
     """
     Save file locally, Chunk with Docling, and Upsert to Qdrant.
     """
     temp_path = f"temp_{session_id}_{file.filename}"
-    try:
-        # Save temp file
-        with open(temp_path, "wb") as f:
-            f.write(await file.read())
-        
-        message = await run_full_ingestion(temp_path, session_id=session_id)
-        
-        return {"status": "success", "message": message}
     
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
+    # Save file efficiently without locking the async event loop
+    with open(temp_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+        
+    print("ingestion started")
+    message = await run_full_ingestion(temp_path, session_id=session_id)
+    
+    # Register the cleanup to trigger immediately AFTER the response is sent
+    background_tasks.add_task(remove_temp_file, temp_path)
+    
+    return {"status": "success", "message": message}
 
 @app.post("/ask", response_model=QueryResponse, tags=["Agent"])
 async def ask_researcher(request: QueryRequest):

@@ -28,6 +28,10 @@ dependencies = [
     "onnxruntime==1.23.2",
     "langgraph-checkpoint-postgres==3.1.0",
     "psycopg[binary]==3.3.4",
+    "torch==2.5.1",
+    "torchvision==0.20.1",
+    "pypdf>=6.13.0",
+    "chonkie>=1.6.8",
 ]
 
 [build-system]
@@ -37,3 +41,11 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools]
 # This tells setuptools: "Don't try to find any packages to install"
 packages = []
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }

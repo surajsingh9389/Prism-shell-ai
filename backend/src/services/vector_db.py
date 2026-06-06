@@ -18,7 +18,7 @@ class VectorDBService:
         self.collection_name = collection_name
         
         # It handles the embedding generation locally with high optimization
-        self.embeddings = FastEmbedEmbeddings(model_name=model_name, cache_dir="E:/AI_Projects/Autonomous Research Analyst/backend/.fastembed_cache")
+        self.embeddings = FastEmbedEmbeddings(model_name=model_name, )
         self.vectorstore = None
         
         # Determine the environment mode: "local" or "cloud" (defaults to local)

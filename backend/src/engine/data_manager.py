@@ -12,6 +12,7 @@ async def run_full_ingestion(file_path: str, session_id: str):
     It connects the two services together.
     """
     # 1. Chunker
+    print("chunking stated.")
     chunks = await ingestor.ingest_and_chunk(file_path)
     
     # 2. Vector DB
