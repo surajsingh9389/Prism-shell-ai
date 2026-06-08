@@ -1,7 +1,8 @@
-from pathlib import Path
 from typing import List
-from langchain_community.document_loaders import PyPDFLoader
 from langchain_core.documents import Document
+
+import io
+from unstructured.partition.auto import partition
 
 # Import Chonkie's modular pipeline constructs
 from chonkie import Pipeline
@@ -16,38 +17,35 @@ class IngestionService:
             .refine_with("overlap", context_size=64)
         )
     
-    async def ingest_and_chunk(self, file_path: str) -> List[Document]:
-        """Parses PDFs via pypdf and applies structural chunking with overlapping context loops."""
-        source_name = Path(file_path).name
+    async def ingest_and_chunk(self, file_bytes: bytes, file_name: str) -> List[Document]:
+        """Pure Python multi-format parser using Unstructured."""
         
-        loader = PyPDFLoader(file_path)
-        raw_pages = await loader.aload()
-            
+        # Wrap bytes in an in-memory stream
+        file_stream = io.BytesIO(file_bytes)
+        
+        # Automatically detect layout elements and parse text
+        elements = partition(file=file_stream, file_name=file_name)
+        full_text = "\n\n".join([str(el) for el in elements])
+        
+        if not full_text.strip():
+            return []
+        
+        # Run the extracted text string straight through your Chonkie pipeline wrapper
+        pipeline_doc = self.chonkie_pipeline.run(full_text)
+        
+        print("Recursive chunking")
+        print(pipeline_doc)
+        
         final_cleaned_chunks = []
-        chunk_counter = 0
-        
-        for page in raw_pages:
-            page_text = page.page_content
-            page_num = page.metadata.get("page", 0) + 1
-            
-            # 1. Run the text through the pipeline wrapper
-            pipeline_doc = self.chonkie_pipeline.run(page_text)
-            
-            # FIX: Loop through pipeline_doc.chunks instead of trying to iterate the doc directly
-            for chunk in pipeline_doc.chunks:
-                clean_metadata = {
-                    "source": source_name,
+        for chunk_counter, chunk in enumerate(pipeline_doc.chunks):
+            langchain_doc = Document(
+                page_content=chunk.text,
+                metadata={
+                    "source": file_name,
                     "chunk_id": chunk_counter,
-                    "page": page_num,
                     "token_count": chunk.token_count
                 }
-                
-                langchain_doc = Document(
-                    page_content=chunk.text,
-                    metadata=clean_metadata
-                )
-                final_cleaned_chunks.append(langchain_doc)
-                chunk_counter += 1
-                
-        print(f"Ingestion complete. Created {final_cleaned_chunks} context-overlapped chunks.")
+            )
+            final_cleaned_chunks.append(langchain_doc)
+            
         return final_cleaned_chunks

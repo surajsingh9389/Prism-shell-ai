@@ -1,11 +1,9 @@
-import os
-import shutil
 import traceback
-import asyncio
+
 from contextlib import asynccontextmanager
 from pydantic import BaseModel
 from typing import List
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request, BackgroundTasks
+from fastapi import FastAPI, UploadFile, File, Form, Request
 from src.engine.data_manager import run_full_ingestion
 from fastapi.middleware.cors import CORSMiddleware
 from src.engine.graph import get_runtime_graph_with_pool
@@ -13,12 +11,6 @@ from src.core.database import db_pool
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from fastapi.responses import JSONResponse
 
-
-# Define a simple standalone cleanup function
-def remove_temp_file(file_path: str):
-    if os.path.exists(file_path):
-        os.remove(file_path)
-        print(f"Cleaned up temporary file: {file_path}")
 
 
 @asynccontextmanager
@@ -89,21 +81,15 @@ async def health_check():
     return {"status": "ok", "message": "Personal Knowledge Agent is running!"}    
 
 @app.post("/ingest", tags=["Ingestion"])
-async def ingest_data(background_tasks: BackgroundTasks, file: UploadFile = File(...), session_id: str = Form(...)):
+async def ingest_data(file: UploadFile = File(...), session_id: str = Form(...)):
     """
-    Save file locally, Chunk with Docling, and Upsert to Qdrant.
-    """
-    temp_path = f"temp_{session_id}_{file.filename}"
     
-    # Save file efficiently without locking the async event loop
-    with open(temp_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    """
+    # Read the network file stream directly into memory bytes
+    file_bytes = await file.read()
         
     print("ingestion started")
-    message = await run_full_ingestion(temp_path, session_id=session_id)
-    
-    # Register the cleanup to trigger immediately AFTER the response is sent
-    background_tasks.add_task(remove_temp_file, temp_path)
+    message = await run_full_ingestion(file_bytes, file.filename, session_id=session_id)
     
     return {"status": "success", "message": message}
 
