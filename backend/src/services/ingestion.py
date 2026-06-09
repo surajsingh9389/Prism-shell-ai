@@ -13,7 +13,7 @@ class IngestionService:
         # Chonkie only pulls down the vocabulary ruleset, keeping it light and stable.
         self.chonkie_pipeline = (
             Pipeline()
-            .chunk_with("recursive", tokenizer="sentence-transformers/all-MiniLM-L6-v2", chunk_size=512)
+            .chunk_with("recursive", tokenizer="sentence-transformers/all-MiniLM-L6-v2", chunk_size=486)
             .refine_with("overlap", context_size=64)
         )
     
@@ -24,7 +24,7 @@ class IngestionService:
         file_stream = io.BytesIO(file_bytes)
         
         # Automatically detect layout elements and parse text
-        elements = partition(file=file_stream, file_name=file_name)
+        elements = partition(file=file_stream, metadata_filename=file_name)
         full_text = "\n\n".join([str(el) for el in elements])
         
         if not full_text.strip():
@@ -34,7 +34,6 @@ class IngestionService:
         pipeline_doc = self.chonkie_pipeline.run(full_text)
         
         print("Recursive chunking")
-        print(pipeline_doc)
         
         final_cleaned_chunks = []
         for chunk_counter, chunk in enumerate(pipeline_doc.chunks):
@@ -47,5 +46,7 @@ class IngestionService:
                 }
             )
             final_cleaned_chunks.append(langchain_doc)
-            
+        
+        print(len(final_cleaned_chunks))
+        print(final_cleaned_chunks)
         return final_cleaned_chunks

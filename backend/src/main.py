@@ -82,11 +82,10 @@ async def health_check():
 
 @app.post("/ingest", tags=["Ingestion"])
 async def ingest_data(file: UploadFile = File(...), session_id: str = Form(...)):
-    """
-    
-    """
     # Read the network file stream directly into memory bytes
     file_bytes = await file.read()
+       
+    print("Session_id", session_id)
         
     print("ingestion started")
     message = await run_full_ingestion(file_bytes, file.filename, session_id=session_id)
