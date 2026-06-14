@@ -1,8 +1,8 @@
 import json
 from typing import Literal, Optional
 
-from src.core.state import AgentState
-from src.core.prompts import GENERATOR_PROMPT, EVALUATOR_PROMPT, REFINER_PROMPT
+from src.core.state import AgentState, RouteQuery
+from src.core.prompts import GENERATOR_PROMPT, EVALUATOR_PROMPT, REFINER_PROMPT, PLANER_PROMPT
 from src.services.llm import LLMService
 from src.engine.data_manager import vector_db
 from langchain_core.runnables import RunnableConfig
@@ -16,21 +16,37 @@ async def planner(state: AgentState) -> AgentState:
     
     # Pull the newest incoming user query from the message history
     latest_message = state["messages"][-1].content if state.get("messages") else ""
-    
-    query = latest_message.lower()
-    
+        
     # Cache the latest query text into the state string for the retriever to use
     state["query"] = latest_message
     
-    # Heuristics for 2026 RAG intent detection
-    retrieval_keywords = [
-        "document", "pdf", "file", "uploaded",
-        "according to", "in the text", "based on"
-    ]
+    if not latest_message.strip():
+        state["plan"] = "direct_answer"
+        return state
     
-    state["plan"] = "retrieve" if any(k in query for k in retrieval_keywords) else "direct_answer"
+    prompt_value = PLANER_PROMPT.invoke({"latest_message": latest_message})
     
-    state.setdefault("thoughts", []).append(f"Planner: Strategy set to {state['plan']}")
+    # Extract system and human messages from the template
+    system_msg = prompt_value.messages[0].content
+    user_msg = prompt_value.messages[1].content
+    
+    try: 
+        raw_eval = await llm_service.plan_route(
+            system_msg, 
+            user_msg
+        )
+        
+        data = json.loads(raw_eval)
+        validated_route = RouteQuery(**data)
+        
+        state["plan"] = validated_route.next_step
+        log_entry = f"Planner: Routed to '{validated_route.next_step}' | Reason: {validated_route.reasoning}"
+    except Exception as e:
+        state["plan"] = "retrieve"
+        log_entry = f"Planner: HF Routing failed or returned invalid JSON ({str(e)}). Defaulting to retrieve."
+    
+    # Save logs and return state
+    state.setdefault("thoughts", []).append(log_entry)
     return state
 
 
@@ -105,7 +121,7 @@ async def critic(state: AgentState) -> AgentState:
     system_msg = prompt_value.messages[0].content
     user_msg = prompt_value.messages[1].content
 
-    # Call the structured evaluation service (Llama-3.3-70B)
+    # Call the structured evaluation service
     raw_eval = await llm_service.evaluate_structured(
         system_msg, 
         user_msg

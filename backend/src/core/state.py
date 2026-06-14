@@ -1,5 +1,6 @@
 from typing import List, Literal, TypedDict, Annotated
 from langgraph.graph.message import add_messages
+from pydantic import BaseModel
 
 class RetrievedDoc(TypedDict):
     content: str
@@ -22,3 +23,14 @@ class AgentState(TypedDict):
     plan: Literal["direct_answer", "retrieve"]
     thoughts: List[str]
     messages: Annotated[list, add_messages]
+    
+class EvalResponse(BaseModel):
+    faithfulness_score: float
+    relevance_score: float
+    feedback: str
+    
+class RouteQuery(BaseModel):
+    next_step: Literal["retrieve", "direct_answer"]
+    reasoning: str
+
+    
