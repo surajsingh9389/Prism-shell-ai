@@ -39,13 +39,12 @@ REFINER_PROMPT = ChatPromptTemplate.from_messages([
 
 
 PLANER_PROMPT = ChatPromptTemplate.from_messages([
-    ("system", "You are an expert routing assistant for an interactive knowledge base.\n"
-                "Your job is to determine if the user's request requires fetching information from "
-                "their uploaded documents (retrieve), or if it's a general greeting/casual query (direct_answer).\n\n"
-                "You MUST respond ONLY with a JSON object matching this schema:\n"
-                "{\n"
-                '  "next_step": "retrieve" or "direct_answer",\n'
-                '  "reasoning": "A brief explanation of why this route was chosen"\n'
-                "}"),
+    ("system", """You are an expert routing assistant for an interactive knowledge base.
+                Your job is to determine if the user's request requires fetching information from their uploaded documents (retrieve), or if it's a general greeting/casual query (direct_answer).
+                You MUST respond ONLY with a JSON object matching this schema:
+                {{
+                "next_step": "retrieve" or "direct_answer",
+                "reasoning": "A brief explanation of why this route was chosen"
+                }}"""),
     ("user", "User Query: {latest_message}")  
 ])
