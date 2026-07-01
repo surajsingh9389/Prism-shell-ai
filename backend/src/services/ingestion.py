@@ -33,8 +33,6 @@ class IngestionService:
         # Run the extracted text string straight through your Chonkie pipeline wrapper
         pipeline_doc = self.chonkie_pipeline.run(full_text)
         
-        print("Recursive chunking")
-        
         final_cleaned_chunks = []
         for chunk_counter, chunk in enumerate(pipeline_doc.chunks):
             langchain_doc = Document(
@@ -47,6 +45,4 @@ class IngestionService:
             )
             final_cleaned_chunks.append(langchain_doc)
         
-        print(len(final_cleaned_chunks))
-        print(final_cleaned_chunks)
         return final_cleaned_chunks

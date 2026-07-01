@@ -132,7 +132,6 @@ class VectorDBService:
                 "rerank_score": 0.0
             })
         
-        print(final_output)
         return final_output
     
     

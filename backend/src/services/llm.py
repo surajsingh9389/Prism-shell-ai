@@ -1,5 +1,4 @@
 import os
-from typing import Optional
 from dotenv import load_dotenv
 from huggingface_hub import AsyncInferenceClient
 from src.core.state import EvalResponse, RouteQuery
@@ -28,7 +27,7 @@ class LLMService:
             max_tokens=500,
             temperature=0.0
         )
-        return completion.choices[0].message.content.strip()
+        return completion.choices[0].message.content.strip()    
 
     async def evaluate_structured(self, system_prompt: str, user_prompt: str) -> str:
         """
